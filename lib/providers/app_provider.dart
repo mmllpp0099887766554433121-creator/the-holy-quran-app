@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import '../services/database_service.dart';
+import '../services/semantic_search_service.dart';
+// import '../services/memorization_service.dart';
+// import '../services/audio_recitation_service.dart';
+// import '../services/challenge_service.dart';
+import '../models/quran_models.dart';
 
 final themeMap = {
   'system': ThemeMode.system,
@@ -25,17 +31,60 @@ enum Cache {
 
 class AppProvider extends ChangeNotifier {
   static AppProvider s(BuildContext context, [bool listen = false]) =>
-      Provider.of<AppProvider>(context, listen: listen);
+      Provider.of<AppProvider>(context, listen: false);
 
   var themeMode = ThemeMode.light;
   var locale = const Locale('ar', '');
   var fontSize = 16.0;
+  var fontFamily = 'Amiri';
   var key = const Key('app');
   var firstOpen = false;
   var prayerNotifications = true;
   late Box<dynamic> _cache;
   bool get isDark => themeMode == ThemeMode.dark;
   bool get isArabic => locale.languageCode == 'ar';
+  
+  ThemeData get themeData {
+    if (isDark) {
+      return ThemeData.dark().copyWith(
+        primaryColor: Color(0xFF1B4332),
+        colorScheme: ColorScheme.dark(
+          primary: Color(0xFF1B4332),
+          secondary: Color(0xFF2D6A4F),
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Color(0xFF1B4332),
+          foregroundColor: Colors.white,
+        ),
+      );
+    } else {
+      return ThemeData.light().copyWith(
+        primaryColor: Color(0xFF1B4332),
+        colorScheme: ColorScheme.light(
+          primary: Color(0xFF1B4332),
+          secondary: Color(0xFF2D6A4F),
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Color(0xFF1B4332),
+          foregroundColor: Colors.white,
+        ),
+      );
+    }
+  }
+  
+  // New properties for enhanced functionality
+  bool _isInitialized = false;
+  int _currentIndex = 0;
+  bool _isFocusMode = false;
+  DateTime? _sessionStartTime;
+  int? _currentSurah;
+  int? _currentAyah;
+  Map<String, dynamic>? _cachedStats;
+  DateTime? _lastStatsUpdate;
+  
+  bool get isInitialized => _isInitialized;
+  int get currentIndex => _currentIndex;
+  bool get isFocusMode => _isFocusMode;
 
   AppProvider() {
     _init();
@@ -54,12 +103,32 @@ class AppProvider extends ChangeNotifier {
     final cachedFontSize = _cache.get(Cache.fontSize.toString());
     fontSize = cachedFontSize ?? fontSize;
 
+    final cachedFontFamily = _cache.get('fontFamily');
+    fontFamily = cachedFontFamily ?? fontFamily;
+
     final cachedNotifications = _cache.get(Cache.prayerNotifications.toString());
     prayerNotifications = cachedNotifications ?? prayerNotifications;
 
     final hasOpened = _cache.get(Cache.firstOpen.toString());
     firstOpen = hasOpened == null;
+    
+    // Initialize new services
+    await _initializeServices();
+    
     notifyListeners();
+  }
+  
+  Future<void> _initializeServices() async {
+    try {
+      await DatabaseService.instance.initialize();
+      SemanticSearchService.instance.initialize();
+      // await AudioRecitationService.instance.initialize();
+      _isInitialized = true;
+    } catch (e) {
+      print('Error initializing services: $e');
+      // Even if there's an error, mark as initialized to prevent infinite loading
+      _isInitialized = true;
+    }
   }
 
   void setTheme(ThemeMode newTheme) {
@@ -87,6 +156,13 @@ class AppProvider extends ChangeNotifier {
     fontSize = newSize;
     notifyListeners();
     _cache.put(Cache.fontSize.toString(), newSize);
+  }
+
+  void setFontFamily(String newFontFamily) {
+    if (fontFamily == newFontFamily) return;
+    fontFamily = newFontFamily;
+    _cache.put('fontFamily', fontFamily);
+    notifyListeners();
   }
 
   void setPrayerNotifications(bool enabled) {
@@ -148,5 +224,75 @@ class AppProvider extends ChangeNotifier {
   void resetKey([bool notify = true]) {
     key = Key(DateTime.now().toString());
     if (notify) notifyListeners();
+  }
+  
+  // New enhanced functionality
+  void setCurrentIndex(int index) {
+    _currentIndex = index;
+    notifyListeners();
+  }
+
+  void toggleFocusMode() {
+    _isFocusMode = !_isFocusMode;
+    notifyListeners();
+  }
+
+  // Reading session management
+  void startReadingSession(int surahNumber, int ayahNumber) {
+    _sessionStartTime = DateTime.now();
+    _currentSurah = surahNumber;
+    _currentAyah = ayahNumber;
+    notifyListeners();
+  }
+
+  Future<void> endReadingSession() async {
+    if (_sessionStartTime != null && _currentSurah != null && _currentAyah != null) {
+      final duration = DateTime.now().difference(_sessionStartTime!).inSeconds;
+      
+      final session = ReadingSession(
+        startTime: _sessionStartTime!,
+        endTime: DateTime.now(),
+        surahNumber: _currentSurah!,
+        startAyah: _currentAyah!,
+        duration: duration,
+      );
+      
+      await DatabaseService.instance.saveReadingSession(session);
+      
+      _sessionStartTime = null;
+      _currentSurah = null;
+      _currentAyah = null;
+      notifyListeners();
+    }
+  }
+
+  bool get isInReadingSession => _sessionStartTime != null;
+  
+  Duration get currentSessionDuration {
+    if (_sessionStartTime == null) return Duration.zero;
+    return DateTime.now().difference(_sessionStartTime!);
+  }
+
+  // Statistics with caching
+  Map<String, dynamic> getStatistics() {
+    final now = DateTime.now();
+    
+    // Cache stats for 5 minutes
+    if (_cachedStats != null && 
+        _lastStatsUpdate != null && 
+        now.difference(_lastStatsUpdate!).inMinutes < 5) {
+      return _cachedStats!;
+    }
+    
+    _cachedStats = DatabaseService.instance.getReadingStatistics();
+    _lastStatsUpdate = now;
+    
+    return _cachedStats!;
+  }
+
+  void refreshStatistics() {
+    _cachedStats = null;
+    _lastStatsUpdate = null;
+    notifyListeners();
   }
 }
