@@ -23,9 +23,10 @@ jobs:
     - name: Setup Flutter (Simple)
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.16.0'  # Using older stable version
+        flutter-version: '3.13.0'  # Using even older stable version
         channel: 'stable'
         cache: false  # Disable cache to avoid issues
+      timeout-minutes: 2
         
     - name: Flutter doctor
       run: flutter doctor -v
