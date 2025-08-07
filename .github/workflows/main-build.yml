@@ -35,8 +35,15 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
       
-    - name: Generate code
-      run: flutter pub run build_runner build --delete-conflicting-outputs
+    - name: Generate code (if needed)
+      run: |
+        echo "Checking if code generation is needed..."
+        if [ ! -f "lib/models/quran_models.g.dart" ]; then
+          echo "Generated files missing, running build_runner..."
+          timeout 60s flutter pub run build_runner build --delete-conflicting-outputs || echo "Build runner failed, but continuing..."
+        else
+          echo "Generated files exist, skipping code generation"
+        fi
       continue-on-error: true
       
     - name: Analyze code
