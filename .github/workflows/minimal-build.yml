@@ -1,0 +1,142 @@
+name: Minimal Build Test
+
+on:
+  push:
+    branches: [ feature/hasanati-islamic-app ]
+  workflow_dispatch:
+
+jobs:
+  minimal-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
+    - name: Setup Flutter (Minimal)
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.13.0'  # Using even older stable version
+        channel: 'stable'
+        cache: false
+        
+    - name: Flutter doctor
+      run: flutter doctor -v
+      
+    - name: Create minimal pubspec.yaml
+      run: |
+        echo "Creating minimal pubspec.yaml for testing..."
+        cp pubspec.yaml pubspec.yaml.backup
+        cat > pubspec.yaml << 'EOF'
+        name: hasanati
+        description: "تطبيق حسناتي الإسلامي - القرآن الكريم والأذكار"
+        publish_to: 'none'
+        version: 1.0.0+1
+
+        environment:
+          sdk: '>=3.0.0 <4.0.0'
+
+        dependencies:
+          flutter:
+            sdk: flutter
+          provider: ^6.1.1
+          shared_preferences: ^2.2.2
+          path: ^1.8.3
+
+        dev_dependencies:
+          flutter_test:
+            sdk: flutter
+
+        flutter:
+          uses-material-design: true
+          assets:
+            - assets/
+            - assets/data/
+            - assets/images/
+            - assets/audio/
+        EOF
+      
+    - name: Get minimal dependencies
+      run: flutter pub get
+      timeout-minutes: 2
+      
+    - name: Check project structure
+      run: |
+        echo "Checking project structure..."
+        ls -la lib/
+        echo "Checking main.dart..."
+        head -20 lib/main.dart
+      
+    - name: Create minimal main.dart
+      run: |
+        echo "Creating minimal main.dart for testing..."
+        cp lib/main.dart lib/main.dart.backup
+        cat > lib/main.dart << 'EOF'
+        import 'package:flutter/material.dart';
+
+        void main() {
+          runApp(HasanatiApp());
+        }
+
+        class HasanatiApp extends StatelessWidget {
+          @override
+          Widget build(BuildContext context) {
+            return MaterialApp(
+              title: 'Hasanati',
+              theme: ThemeData(
+                primarySwatch: Colors.green,
+              ),
+              home: MyHomePage(),
+            );
+          }
+        }
+
+        class MyHomePage extends StatelessWidget {
+          @override
+          Widget build(BuildContext context) {
+            return Scaffold(
+              appBar: AppBar(
+                title: Text('حسناتي'),
+              ),
+              body: Center(
+                child: Text(
+                  'تطبيق حسناتي الإسلامي',
+                  style: TextStyle(fontSize: 24),
+                ),
+              ),
+            );
+          }
+        }
+        EOF
+      
+    - name: Build Minimal Debug APK
+      run: flutter build apk --debug --no-shrink
+      timeout-minutes: 3
+      
+    - name: Check APK output
+      run: |
+        echo "Checking APK output..."
+        ls -la build/app/outputs/flutter-apk/
+        file build/app/outputs/flutter-apk/app-debug.apk
+        
+    - name: Upload Minimal Debug APK
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: hasanati-minimal-debug-apk
+        path: build/app/outputs/flutter-apk/app-debug.apk
+        retention-days: 3
+        
+    - name: Restore original files
+      if: always()
+      run: |
+        echo "Restoring original files..."
+        mv pubspec.yaml.backup pubspec.yaml || echo "No pubspec backup to restore"
+        mv lib/main.dart.backup lib/main.dart || echo "No main.dart backup to restore"
