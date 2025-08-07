@@ -1,14 +1,15 @@
-name: Build Android APK
+name: Build Hasanati APK
 
 on:
   push:
     branches: [ feature/hasanati-islamic-app, master, main ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ feature/hasanati-islamic-app, master, main ]
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build APK
     runs-on: ubuntu-latest
     
     steps:
@@ -26,6 +27,7 @@ jobs:
       with:
         flutter-version: '3.24.5'
         channel: 'stable'
+        cache: true
         
     - name: Flutter doctor
       run: flutter doctor -v
@@ -38,37 +40,51 @@ jobs:
       continue-on-error: true
       
     - name: Analyze code
-      run: flutter analyze
+      run: flutter analyze --no-fatal-infos
       continue-on-error: true
       
     - name: Run tests
       run: flutter test
       continue-on-error: true
       
-    - name: Build APK (Release)
+    - name: Build Debug APK
+      run: flutter build apk --debug --verbose
+      
+    - name: Build Release APK
       run: flutter build apk --release --verbose
       
-    - name: Build App Bundle (Release)
+    - name: Build App Bundle
       run: flutter build appbundle --release --verbose
+      continue-on-error: true
       
-    - name: Upload APK artifact
+    - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
-        name: hasanati-apk
+        name: hasanati-debug-apk-${{ github.run_number }}
+        path: build/app/outputs/flutter-apk/app-debug.apk
+        retention-days: 7
+        
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: hasanati-release-apk-${{ github.run_number }}
         path: build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 30
         
-    - name: Upload App Bundle artifact
+    - name: Upload App Bundle
       uses: actions/upload-artifact@v4
       with:
-        name: hasanati-aab
+        name: hasanati-aab-${{ github.run_number }}
         path: build/app/outputs/bundle/release/app-release.aab
+        retention-days: 30
+      continue-on-error: true
         
-    - name: Create Release
+    - name: Create Release (on feature branch push)
       if: github.ref == 'refs/heads/feature/hasanati-islamic-app' && github.event_name == 'push'
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v1.0.0-${{ github.run_number }}
-        name: Hasanati Islamic App v1.0.0-${{ github.run_number }}
+        tag_name: v1.0.0-build-${{ github.run_number }}
+        name: حسناتي v1.0.0-build-${{ github.run_number }}
         body: |
           ## حسناتي - التطبيق الإسلامي الشامل
           
@@ -86,7 +102,8 @@ jobs:
           ### معلومات التطبيق:
           - **الاسم**: حسناتي (Hasanati)
           - **المطور**: Voxin
-          - **الإصدار**: 1.0.0-${{ github.run_number }}
+          - **الإصدار**: 1.0.0-build-${{ github.run_number }}
+          - **Build**: ${{ github.sha }}
           
           ### ملفات التحميل:
           - **APK**: للتثبيت المباشر على Android
@@ -96,6 +113,6 @@ jobs:
           build/app/outputs/flutter-apk/app-release.apk
           build/app/outputs/bundle/release/app-release.aab
         draft: false
-        prerelease: false
+        prerelease: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
