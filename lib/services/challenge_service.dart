@@ -457,13 +457,9 @@ class ChallengeService {
 
   Map<String, dynamic> getChallengeStatistics() {
     final today = DateTime.now();
-    final thisMonth = DateTime(today.year, today.month);
     
     // Get all challenges for this month
-    final monthChallenges = <DailyChallenge>[];
     for (int day = 1; day <= today.day; day++) {
-      final date = DateTime(today.year, today.month, day);
-      final challengeId = '${date.year}-${date.month}-${date.day}';
       // This would need to be implemented in database service
     }
     

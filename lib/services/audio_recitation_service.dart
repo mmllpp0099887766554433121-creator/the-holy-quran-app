@@ -173,7 +173,9 @@ class AudioRecitationService {
       },
       listenFor: Duration(seconds: 30),
       pauseFor: Duration(seconds: 3),
-      partialResults: true,
+      listenOptions: SpeechListenOptions(
+        partialResults: true,
+      ),
       localeId: 'ar_SA', // Arabic locale
     );
   }
@@ -194,7 +196,7 @@ class AudioRecitationService {
     // Store results for memorization service
     if (accuracy < 0.8) {
       // Record mistakes for spaced repetition
-      for (final mistake in mistakes) {
+      for (final _ in mistakes) {
         // This would be handled by memorization service
       }
     }

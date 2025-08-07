@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/app_provider.dart';
 import '../services/semantic_search_service.dart';
 import '../services/database_service.dart';
 import '../models/quran_models.dart';
@@ -31,7 +29,6 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<AppProvider>(context);
     
     return Scaffold(
       appBar: AppBar(

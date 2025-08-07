@@ -1,15 +1,15 @@
-name: Build Android APK
+name: Build APK
 
 on:
   push:
-    branches: [ feature/hasanati-islamic-app, master, main ]
+    branches: [ feature/hasanati-islamic-app ]
   pull_request:
-    branches: [ master, main ]
-  workflow_dispatch:
+    branches: [ feature/hasanati-islamic-app ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     steps:
     - name: Checkout repository
@@ -18,84 +18,24 @@ jobs:
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
-        distribution: 'zulu'
+        distribution: 'temurin'
         java-version: '17'
         
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.24.5'
+        flutter-version: '3.16.0'
         channel: 'stable'
+        cache: true
         
-    - name: Flutter doctor
-      run: flutter doctor -v
-      
     - name: Get dependencies
       run: flutter pub get
       
-    - name: Generate code
-      run: flutter pub run build_runner build --delete-conflicting-outputs
-      continue-on-error: true
+    - name: Build APK
+      run: flutter build apk --debug
       
-    - name: Analyze code
-      run: flutter analyze
-      continue-on-error: true
-      
-    - name: Run tests
-      run: flutter test
-      continue-on-error: true
-      
-    - name: Build APK (Release)
-      run: flutter build apk --release --verbose
-      
-    - name: Build App Bundle (Release)
-      run: flutter build appbundle --release --verbose
-      
-    - name: Upload APK artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: hasanati-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
-        
-    - name: Upload App Bundle artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: hasanati-aab
-        path: build/app/outputs/bundle/release/app-release.aab
-        
-    - name: Create Release
-      if: github.ref == 'refs/heads/feature/hasanati-islamic-app' && github.event_name == 'push'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v1.0.0-${{ github.run_number }}
-        name: Hasanati Islamic App v1.0.0-${{ github.run_number }}
-        body: |
-          ## حسناتي - التطبيق الإسلامي الشامل
-          
-          ### الميزات الجديدة:
-          - 📖 القرآن الكريم مع البحث والمفضلة
-          - 🕌 أسماء الله الحسنى (99 اسم) مع المعاني
-          - 🤲 الأذكار والأدعية (صباح، مساء، نوم)
-          - ⏰ مواقيت الصلاة مع التنبيهات
-          - 🧭 اتجاه القبلة بالبوصلة
-          - 📅 التقويم الهجري
-          - 🌙 الوضع الليلي والنهاري
-          - 🌍 دعم اللغتين العربية والإنجليزية
-          - 📱 يعمل بدون إنترنت
-          
-          ### معلومات التطبيق:
-          - **الاسم**: حسناتي (Hasanati)
-          - **المطور**: Voxin
-          - **الإصدار**: 1.0.0-${{ github.run_number }}
-          
-          ### ملفات التحميل:
-          - **APK**: للتثبيت المباشر على Android
-          - **AAB**: للنشر على Google Play Store
-          
-        files: |
-          build/app/outputs/flutter-apk/app-release.apk
-          build/app/outputs/bundle/release/app-release.aab
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: debug-apk
+        path: build/app/outputs/flutter-apk/app-debug.apk

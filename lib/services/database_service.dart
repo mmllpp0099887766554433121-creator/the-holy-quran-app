@@ -239,7 +239,7 @@ class DatabaseService {
   }
 
   Future<void> removeBookmark(int surahNumber, int ayahNumber) async {
-    final key = '${surahNumber}_${ayahNumber}';
+    final key = '${surahNumber}_$ayahNumber';
     await _bookmarkBox.delete(key);
   }
 
@@ -248,7 +248,7 @@ class DatabaseService {
   }
 
   bool isBookmarked(int surahNumber, int ayahNumber) {
-    final key = '${surahNumber}_${ayahNumber}';
+    final key = '${surahNumber}_$ayahNumber';
     return _bookmarkBox.containsKey(key);
   }
 
@@ -259,7 +259,7 @@ class DatabaseService {
   }
 
   MemorizationProgress? getMemorizationProgress(int surahNumber, int ayahNumber) {
-    final key = '${surahNumber}_${ayahNumber}';
+    final key = '${surahNumber}_$ayahNumber';
     return _memorizationBox.get(key);
   }
 

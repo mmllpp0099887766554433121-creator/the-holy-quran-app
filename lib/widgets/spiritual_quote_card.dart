@@ -248,16 +248,6 @@ class _SpiritualQuoteCardState extends State<SpiritualQuoteCard> {
   }
 
   void _shareQuote() {
-    final text = '''
-${_currentQuote['text']}
-
-${_currentQuote['reflection']}
-
-المرجع: ${_currentQuote['reference']}
-
-من تطبيق حسناتي - القرآن الكريم والأذكار
-''';
-    
     // In a real app, you would use share_plus package
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
