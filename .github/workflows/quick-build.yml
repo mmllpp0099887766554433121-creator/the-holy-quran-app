@@ -1,0 +1,53 @@
+name: Quick Build Test
+
+on:
+  push:
+    branches: [ feature/hasanati-islamic-app ]
+  workflow_dispatch:
+
+jobs:
+  quick-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
+    - name: Setup Flutter (Quick)
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.22.0'  # Using older stable version
+        channel: 'stable'
+        cache: true
+      timeout-minutes: 3
+        
+    - name: Flutter doctor
+      run: flutter doctor -v
+      timeout-minutes: 1
+      
+    - name: Get dependencies
+      run: flutter pub get
+      timeout-minutes: 2
+      
+    - name: Skip code generation (files exist)
+      run: |
+        echo "Skipping code generation as files already exist"
+        ls -la lib/models/
+      
+    - name: Build Debug APK (Quick)
+      run: flutter build apk --debug
+      timeout-minutes: 5
+      
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: hasanati-quick-debug-apk
+        path: build/app/outputs/flutter-apk/app-debug.apk
+        retention-days: 7

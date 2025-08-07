@@ -28,6 +28,9 @@ jobs:
         flutter-version: '3.24.5'
         channel: 'stable'
         cache: true
+        cache-key: flutter-${{ runner.os }}-${{ hashFiles('**/pubspec.lock') }}
+        cache-path: ${{ runner.tool_cache }}/flutter
+      timeout-minutes: 5
         
     - name: Flutter doctor
       run: flutter doctor -v
